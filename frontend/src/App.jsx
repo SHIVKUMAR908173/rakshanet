@@ -7,6 +7,7 @@ import AlertQueue from './pages/AlertQueue';
 import AlertDetail from './pages/AlertDetail';
 import PlaybookLibrary from './pages/PlaybookLibrary';
 import Incidents from './pages/Incidents';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="alerts/:id" element={<AlertDetail />} />
           <Route path="playbooks" element={<PlaybookLibrary />} />
           <Route path="incidents" element={<Incidents />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
