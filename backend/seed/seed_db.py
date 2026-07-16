@@ -16,6 +16,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import engine, async_session, Base
+import models
 from models.playbook import Playbook
 from models.asset import Asset
 from models.user import User

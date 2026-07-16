@@ -29,6 +29,7 @@ logger = logging.getLogger("rakshanet")
 async def lifespan(app: FastAPI):
     """Application lifespan: initialise database on startup, clean up on shutdown."""
     logger.info("🛡️  RakshaNet starting up...")
+    import models  # Ensure all models are registered with Base.metadata
     await init_db()
     logger.info("✅ Database tables ready")
     yield
