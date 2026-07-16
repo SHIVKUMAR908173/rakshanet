@@ -1,0 +1,330 @@
+[
+  {
+    "name": "Phishing Email Response",
+    "threat_type": "phishing",
+    "severity": "medium",
+    "mitre_technique": "T1566",
+    "mitre_technique_name": "Phishing",
+    "description": "Response playbook for confirmed phishing emails targeting organisation users. Covers email quarantine, domain blocking, and user notification.",
+    "requires_human_confirmation": true,
+    "estimated_time_minutes": 15,
+    "action_sequence": [
+      {
+        "step_number": 1,
+        "action": "quarantine_email",
+        "description": "Quarantine the phishing email and remove it from all recipient inboxes",
+        "is_automated": true,
+        "requires_confirmation": false,
+        "estimated_minutes": 2
+      },
+      {
+        "step_number": 2,
+        "action": "block_sender_domain",
+        "description": "Add the sender domain to the email gateway block list",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 2
+      },
+      {
+        "step_number": 3,
+        "action": "notify_user",
+        "description": "Send a security advisory to the affected user explaining the phishing attempt",
+        "is_automated": true,
+        "requires_confirmation": false,
+        "estimated_minutes": 1
+      },
+      {
+        "step_number": 4,
+        "action": "check_click_logs",
+        "description": "Review URL click logs to determine if the user clicked any malicious links",
+        "is_automated": false,
+        "requires_confirmation": false,
+        "estimated_minutes": 5
+      },
+      {
+        "step_number": 5,
+        "action": "report_to_phishtank",
+        "description": "Submit the phishing URL to PhishTank and relevant threat intelligence feeds",
+        "is_automated": false,
+        "requires_confirmation": false,
+        "estimated_minutes": 5
+      }
+    ]
+  },
+  {
+    "name": "Compromised Credential Response",
+    "threat_type": "credential_compromise",
+    "severity": "high",
+    "mitre_technique": "T1078",
+    "mitre_technique_name": "Valid Accounts",
+    "description": "Response playbook for suspected credential compromise — triggered when anomalous login follows a phishing click on the same identity.",
+    "requires_human_confirmation": true,
+    "estimated_time_minutes": 20,
+    "action_sequence": [
+      {
+        "step_number": 1,
+        "action": "force_password_reset",
+        "description": "Immediately force a password reset on the compromised account",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 2
+      },
+      {
+        "step_number": 2,
+        "action": "terminate_sessions",
+        "description": "Terminate all active sessions for the affected user across all services",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 2
+      },
+      {
+        "step_number": 3,
+        "action": "enable_mfa",
+        "description": "Require step-up / multi-factor authentication for the next login",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 3
+      },
+      {
+        "step_number": 4,
+        "action": "review_activity",
+        "description": "Review all recent activity on the account for signs of data access or lateral movement",
+        "is_automated": false,
+        "requires_confirmation": false,
+        "estimated_minutes": 10
+      },
+      {
+        "step_number": 5,
+        "action": "notify_user",
+        "description": "Contact the user directly to confirm whether the access was legitimate",
+        "is_automated": false,
+        "requires_confirmation": false,
+        "estimated_minutes": 3
+      }
+    ]
+  },
+  {
+    "name": "Brute Force / Credential Stuffing Response",
+    "threat_type": "brute_force",
+    "severity": "medium",
+    "mitre_technique": "T1110",
+    "mitre_technique_name": "Brute Force",
+    "description": "Response playbook for high failed-login rate from a single or rotating set of source IPs, indicating credential stuffing or brute-force attack.",
+    "requires_human_confirmation": true,
+    "estimated_time_minutes": 15,
+    "action_sequence": [
+      {
+        "step_number": 1,
+        "action": "temporary_account_lock",
+        "description": "Temporarily lock the targeted account(s) for 30 minutes",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 1
+      },
+      {
+        "step_number": 2,
+        "action": "enable_captcha",
+        "description": "Enable CAPTCHA challenge for the targeted login endpoint",
+        "is_automated": true,
+        "requires_confirmation": false,
+        "estimated_minutes": 2
+      },
+      {
+        "step_number": 3,
+        "action": "rate_limit_source",
+        "description": "Apply rate-limiting rules to the source IP range at the firewall",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 3
+      },
+      {
+        "step_number": 4,
+        "action": "check_credential_reuse",
+        "description": "Cross-reference targeted credentials against known breach databases",
+        "is_automated": false,
+        "requires_confirmation": false,
+        "estimated_minutes": 5
+      },
+      {
+        "step_number": 5,
+        "action": "block_ip_range",
+        "description": "If attack persists, permanently block the source IP range",
+        "is_automated": false,
+        "requires_confirmation": true,
+        "estimated_minutes": 4
+      }
+    ]
+  },
+  {
+    "name": "Anomalous OT/SCADA Access Response",
+    "threat_type": "ot_anomaly",
+    "severity": "critical",
+    "mitre_technique": "T1021",
+    "mitre_technique_name": "Remote Services",
+    "description": "CRITICAL: Response playbook for anomalous access to OT/SCADA control endpoints — off-hours access, cross-segment traffic, or command frequency deviation.",
+    "requires_human_confirmation": true,
+    "estimated_time_minutes": 30,
+    "action_sequence": [
+      {
+        "step_number": 1,
+        "action": "isolate_segment",
+        "description": "Immediately isolate the affected OT network segment from the IT network",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 3
+      },
+      {
+        "step_number": 2,
+        "action": "page_ot_engineer",
+        "description": "Page the on-call OT engineer with full alert details and SHAP explanation",
+        "is_automated": true,
+        "requires_confirmation": false,
+        "estimated_minutes": 1
+      },
+      {
+        "step_number": 3,
+        "action": "escalate_soc",
+        "description": "Escalate to SOC lead immediately — this is a potential industrial control system compromise",
+        "is_automated": true,
+        "requires_confirmation": false,
+        "estimated_minutes": 1
+      },
+      {
+        "step_number": 4,
+        "action": "capture_traffic",
+        "description": "Start packet capture on the affected segment for forensic analysis",
+        "is_automated": false,
+        "requires_confirmation": false,
+        "estimated_minutes": 5
+      },
+      {
+        "step_number": 5,
+        "action": "assess_impact",
+        "description": "Assess whether any control commands were executed and verify physical system state",
+        "is_automated": false,
+        "requires_confirmation": false,
+        "estimated_minutes": 15
+      },
+      {
+        "step_number": 6,
+        "action": "report_nciipc",
+        "description": "If confirmed, report the incident to NCIIPC as a Critical Information Infrastructure event",
+        "is_automated": false,
+        "requires_confirmation": true,
+        "estimated_minutes": 5
+      }
+    ]
+  },
+  {
+    "name": "Data Exfiltration Response",
+    "threat_type": "data_exfil",
+    "severity": "critical",
+    "mitre_technique": "T1041",
+    "mitre_technique_name": "Exfiltration Over C2 Channel",
+    "description": "CRITICAL: Response playbook for detected data exfiltration — abnormal outbound volume or entropy from a host suggesting data staging and transfer.",
+    "requires_human_confirmation": true,
+    "estimated_time_minutes": 25,
+    "action_sequence": [
+      {
+        "step_number": 1,
+        "action": "block_egress",
+        "description": "Block all outbound traffic from the affected host at the firewall",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 2
+      },
+      {
+        "step_number": 2,
+        "action": "isolate_host",
+        "description": "Isolate the host from the internal network to prevent lateral movement",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 3
+      },
+      {
+        "step_number": 3,
+        "action": "snapshot_forensics",
+        "description": "Take a full disk and memory snapshot of the host for forensic investigation",
+        "is_automated": false,
+        "requires_confirmation": false,
+        "estimated_minutes": 10
+      },
+      {
+        "step_number": 4,
+        "action": "open_formal_incident",
+        "description": "Open a formal security incident with full timeline and evidence chain",
+        "is_automated": true,
+        "requires_confirmation": false,
+        "estimated_minutes": 2
+      },
+      {
+        "step_number": 5,
+        "action": "notify_dpo",
+        "description": "Notify the Data Protection Officer — potential DPDP Act breach notification trigger",
+        "is_automated": false,
+        "requires_confirmation": true,
+        "estimated_minutes": 5
+      },
+      {
+        "step_number": 6,
+        "action": "report_certin",
+        "description": "Report to CERT-In within the mandatory reporting window",
+        "is_automated": false,
+        "requires_confirmation": true,
+        "estimated_minutes": 3
+      }
+    ]
+  },
+  {
+    "name": "DDoS on Public Portal Response",
+    "threat_type": "ddos",
+    "severity": "high",
+    "mitre_technique": "T1498",
+    "mitre_technique_name": "Network Denial of Service",
+    "description": "Response playbook for DDoS attack detected on a public-facing portal — ingress traffic volume anomaly indicating volumetric or application-layer flood.",
+    "requires_human_confirmation": true,
+    "estimated_time_minutes": 20,
+    "action_sequence": [
+      {
+        "step_number": 1,
+        "action": "enable_scrubbing",
+        "description": "Enable upstream traffic scrubbing / DDoS mitigation service",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 3
+      },
+      {
+        "step_number": 2,
+        "action": "apply_rate_limiting",
+        "description": "Apply aggressive rate-limiting rules on the affected endpoint",
+        "is_automated": true,
+        "requires_confirmation": true,
+        "estimated_minutes": 3
+      },
+      {
+        "step_number": 3,
+        "action": "geo_block",
+        "description": "If attack originates from specific regions, apply geo-blocking rules",
+        "is_automated": false,
+        "requires_confirmation": true,
+        "estimated_minutes": 5
+      },
+      {
+        "step_number": 4,
+        "action": "notify_isp",
+        "description": "Contact the ISP to request upstream filtering and provide attack signature data",
+        "is_automated": false,
+        "requires_confirmation": false,
+        "estimated_minutes": 5
+      },
+      {
+        "step_number": 5,
+        "action": "report_certin",
+        "description": "Report the DDoS attack to CERT-In with traffic analysis data",
+        "is_automated": false,
+        "requires_confirmation": true,
+        "estimated_minutes": 4
+      }
+    ]
+  }
+]

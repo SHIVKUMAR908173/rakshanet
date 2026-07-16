@@ -1,0 +1,80 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL Database ──
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-rakshanet}
+      POSTGRES_USER: ${POSTGRES_USER:-rakshanet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_production}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rakshanet}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis Cache / Queue ──
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI Backend ──
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-rakshanet}:${POSTGRES_PASSWORD:-changeme_in_production}@db:5432/${POSTGRES_DB:-rakshanet}
+      REDIS_URL: redis://redis:6379/0
+      PHISHING_TEXT_MODEL_PATH: ${PHISHING_TEXT_MODEL_PATH:-/app/ml_models/phishing_text_model}
+      PHISHING_URL_MODEL_PATH: ${PHISHING_URL_MODEL_PATH:-/app/ml_models/phishing_url_model.pkl}
+      PHISHING_FUSION_MODEL_PATH: ${PHISHING_FUSION_MODEL_PATH:-/app/ml_models/phishing_fusion_model.pkl}
+      ANOMALY_IF_MODEL_PATH: ${ANOMALY_IF_MODEL_PATH:-/app/ml_models/anomaly_isolation_forest.pkl}
+      ANOMALY_AE_MODEL_PATH: ${ANOMALY_AE_MODEL_PATH:-/app/ml_models/anomaly_autoencoder.pt}
+      CORRELATION_WINDOW_HOURS: ${CORRELATION_WINDOW_HOURS:-24}
+      PHISHING_WEIGHT: ${PHISHING_WEIGHT:-0.4}
+      ANOMALY_WEIGHT: ${ANOMALY_WEIGHT:-0.4}
+      CORRELATION_BONUS_WEIGHT: ${CORRELATION_BONUS_WEIGHT:-0.2}
+      ALERT_THRESHOLD_LOW: ${ALERT_THRESHOLD_LOW:-0.3}
+      ALERT_THRESHOLD_MEDIUM: ${ALERT_THRESHOLD_MEDIUM:-0.5}
+      ALERT_THRESHOLD_HIGH: ${ALERT_THRESHOLD_HIGH:-0.7}
+      ALERT_THRESHOLD_CRITICAL: ${ALERT_THRESHOLD_CRITICAL:-0.9}
+    volumes:
+      - ./ml/models:/app/ml_models:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # ── React Frontend ──
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
