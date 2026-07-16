@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from database import init_db, close_db
 from api import api_router
+from routers import alerts, playbooks, incidents, ingest, dashboard, auth
 
 # ── Logging ──
 logging.basicConfig(
@@ -62,6 +63,9 @@ app.add_middleware(
 
 # ── Routes ──
 app.include_router(api_router)
+app.include_router(ingest.router, prefix="/api/v1")
+app.include_router(dashboard.router, prefix="/api/v1")
+app.include_router(auth.router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Health"])

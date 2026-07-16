@@ -11,6 +11,10 @@ import asyncio
 import json
 import os
 import sys
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
 
 # Add backend to path when run directly
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -129,18 +133,21 @@ async def seed_users(session):
         User(
             name="Admin",
             email="admin@rakshanet.local",
+            password_hash=pwd_context.hash("password123"),
             role="admin",
             department="Security Operations",
         ),
         User(
             name="Analyst One",
             email="analyst1@rakshanet.local",
+            password_hash=pwd_context.hash("password123"),
             role="analyst",
             department="IT Security",
         ),
         User(
             name="OT Engineer",
             email="ot-engineer@rakshanet.local",
+            password_hash=pwd_context.hash("password123"),
             role="engineer",
             department="OT Operations",
         ),
@@ -158,8 +165,9 @@ async def run_seed():
 
     # Create all tables
     async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-    print("  ✓ Database tables created")
+    print("  ✓ Database tables recreated")
 
     async with async_session() as session:
         await seed_users(session)

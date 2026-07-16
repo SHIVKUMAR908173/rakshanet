@@ -16,6 +16,7 @@ class User(Base):
     role: Mapped[str] = mapped_column(
         String(50), nullable=False, default="analyst"
     )  # analyst | admin | engineer
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False, default="")
     department: Mapped[str] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

@@ -1,7 +1,16 @@
-import React from 'react';
-import { Settings as SettingsIcon, Bell, Shield, Users, Database } from 'lucide-react';
+import React, { useState } from 'react';
+import { Settings as SettingsIcon, Bell, Shield, Users, Database, LogOut } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
+  const { user, logout } = useAuth();
+  const [showToast, setShowToast] = useState(false);
+
+  const handleEditProfile = () => {
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3000);
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -20,10 +29,27 @@ export default function Settings() {
           <div style={{ padding: '16px', background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', marginTop: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div>
-                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Analyst Profile</div>
-                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Update your name, email, and role</div>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{user?.name || 'Analyst Profile'}</div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>{user?.email || 'Update your name, email, and role'}</div>
               </div>
-              <button className="playbook-btn">Edit Profile</button>
+              <button className="playbook-btn" onClick={handleEditProfile}>Edit Profile</button>
+            </div>
+            
+            <div style={{ height: '1px', background: 'rgba(148,163,184,0.1)', margin: '12px 0' }} />
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Sign Out</div>
+                <div style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>Log out of the RakshaNet platform</div>
+              </div>
+              <button 
+                className="playbook-btn" 
+                style={{ background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+                onClick={logout}
+              >
+                <LogOut size={16} style={{ marginRight: '8px', display: 'inline' }} />
+                Sign Out
+              </button>
             </div>
           </div>
         </div>
@@ -71,6 +97,27 @@ export default function Settings() {
         </div>
 
       </div>
+
+      {/* Simulated Toast Notification */}
+      {showToast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          background: 'var(--success)',
+          color: 'white',
+          padding: '16px 24px',
+          borderRadius: '8px',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          zIndex: 50,
+          animation: 'slideIn 0.3s ease-out'
+        }}>
+          ✅ Profile updated successfully!
+        </div>
+      )}
     </div>
   );
 }
