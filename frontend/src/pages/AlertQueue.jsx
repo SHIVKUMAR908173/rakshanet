@@ -115,6 +115,46 @@ export default function AlertQueue() {
       .finally(() => setLoading(false));
   }, [filterSeverity, filterStatus]);
 
+  useEffect(() => {
+    // Setup WebSocket connection
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Use the proxy host or fallback to 8000
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/api/v1/alerts/ws`;
+    
+    let ws = new WebSocket(wsUrl);
+    
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        if (message.type === 'new_alert') {
+          const newAlert = message.data;
+          
+          setAlerts(prev => {
+            // Check if alert already exists to prevent duplicates
+            if (prev.alerts.some(a => a.id === newAlert.id)) return prev;
+            
+            // Only add if it matches current filters
+            if (filterSeverity && newAlert.severity !== filterSeverity) return prev;
+            if (filterStatus && newAlert.status !== filterStatus) return prev;
+
+            return {
+              ...prev,
+              total: prev.total + 1,
+              alerts: [newAlert, ...prev.alerts]
+            };
+          });
+        }
+      } catch (err) {
+        console.error("Failed to parse WS message", err);
+      }
+    };
+
+    return () => {
+      if (ws) ws.close();
+    };
+  }, [filterSeverity, filterStatus]);
+
   const handleUpdateStatus = async (id, status) => {
     try {
       await updateAlertStatus(id, status);

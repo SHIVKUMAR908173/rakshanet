@@ -13,11 +13,10 @@ scorer that runs when trained models are not yet available.
 
 import re
 import math
-import logging
-from typing import Optional
-from urllib.parse import urlparse
 import os
 import joblib
+import shap
+import logging
 
 logger = logging.getLogger("rakshanet.phishing_scorer")
 
@@ -30,9 +29,20 @@ if not os.path.exists(ML_MODEL_PATH):
         ML_MODEL_PATH = local_path
 
 ml_model = None
+ml_explainer = None
 try:
     if os.path.exists(ML_MODEL_PATH):
         ml_model = joblib.load(ML_MODEL_PATH)
+        # Background data for SHAP explainer
+        background_data = [
+            "hello team, just wanted to check on the project status",
+            "urgent action required",
+            "please review the attached document when you have time",
+            "your password expires today click here to update"
+        ]
+        tfidf = ml_model.named_steps['tfidf']
+        clf = ml_model.named_steps['clf']
+        ml_explainer = shap.LinearExplainer(clf, tfidf.transform(background_data))
         logger.info(f"Loaded Phishing ML Model from {ML_MODEL_PATH}")
 except Exception as e:
     logger.warning(f"Failed to load Phishing ML model: {e}")
@@ -69,21 +79,32 @@ SHORTENER_DOMAINS = [
 ]
 
 
-def _score_text_heuristic(subject: str, body: str) -> float:
+def _score_text_heuristic(subject: str, body: str) -> tuple[float, dict]:
     """
-    Heuristic text scoring based on urgency and credential-harvest keyword density.
-    Returns a score between 0.0 and 1.0.
+    Returns a tuple of (score, shap_contributions).
+    If ML is available, computes true SHAP values.
+    Otherwise uses heuristic fallback.
     """
     combined = f"{subject} {body}".lower()
     if not combined.strip():
-        return 0.0
+        return 0.0, {}
 
-    if ml_model is not None:
+    if ml_model is not None and ml_explainer is not None:
         try:
-            # ml_model is a LogisticRegression pipeline
-            # predict_proba returns [[prob_0, prob_1]]
-            prob_phishing = ml_model.predict_proba([combined])[0][1]
-            return float(prob_phishing)
+            tfidf = ml_model.named_steps['tfidf']
+            clf = ml_model.named_steps['clf']
+            X_vec = tfidf.transform([combined])
+            prob_phishing = clf.predict_proba(X_vec)[0][1]
+            
+            # Compute SHAP
+            shap_values = ml_explainer.shap_values(X_vec)
+            feature_names = tfidf.get_feature_names_out()
+            contributions = {}
+            for i, val in enumerate(shap_values[0]):
+                if abs(val) > 0.05:  # Only include meaningful contributions
+                    contributions[f"word_{feature_names[i]}"] = float(val)
+                    
+            return float(prob_phishing), contributions
         except Exception as e:
             logger.warning(f"ML text scoring failed, falling back to heuristic: {e}")
 
@@ -109,7 +130,12 @@ def _score_text_heuristic(subject: str, body: str) -> float:
         + 0.15 * min(caps_ratio * 3, 1.0)
     )
 
-    return round(min(text_score, 1.0), 4)
+    heuristic_contributions = {
+        "text_urgency": urgency_score * 0.35,
+        "text_credential": credential_score * 0.35
+    }
+
+    return round(min(text_score, 1.0), 4), heuristic_contributions
 
 
 def _score_url_heuristic(urls: list[str]) -> float:
@@ -184,7 +210,7 @@ def score_email(
         dict with text_score, url_score, combined_score, verdict, model_disagreement,
         and feature_contributions for SHAP-like explainability.
     """
-    text_score = _score_text_heuristic(subject, body)
+    text_score, text_contributions = _score_text_heuristic(subject, body)
     url_score = _score_url_heuristic(urls)
 
     # ── Header-based signals ──
@@ -229,7 +255,7 @@ def score_email(
 
     # ── Feature contributions (SHAP-like) ──
     contributions = {
-        "text_urgency_score": round(text_score, 4),
+        **text_contributions,
         "url_structural_score": round(url_score, 4),
         "model_disagreement_signal": disagreement_bonus,
         **header_contributions,

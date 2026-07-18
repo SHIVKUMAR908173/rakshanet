@@ -18,6 +18,7 @@ from typing import Optional
 import os
 import joblib
 import numpy as np
+import shap
 
 logger = logging.getLogger("rakshanet.anomaly_scorer")
 
@@ -30,9 +31,11 @@ if not os.path.exists(ML_MODEL_PATH):
         ML_MODEL_PATH = local_path
 
 if_model = None
+if_explainer = None
 try:
     if os.path.exists(ML_MODEL_PATH):
         if_model = joblib.load(ML_MODEL_PATH)
+        if_explainer = shap.TreeExplainer(if_model)
         logger.info(f"Loaded Anomaly ML Model from {ML_MODEL_PATH}")
 except Exception as e:
     logger.warning(f"Failed to load Anomaly ML model: {e}")
@@ -139,11 +142,9 @@ def _network_anomaly_score(payload: dict) -> float:
     protocol = (payload.get("protocol") or "").lower()
     dest_port = payload.get("destination_port") or 0
 
-    if if_model is not None:
+    if if_model is not None and if_explainer is not None:
         try:
             # We trained IsolationForest on [hour_of_day, login_failures, bytes_sent_mb]
-            # Just adapting network features to that rough shape to show ML inference works.
-            # In real prod, we'd have a separate autoencoder for network traffic.
             timestamp = payload.get("timestamp")
             hour = 12
             if timestamp:
@@ -157,11 +158,22 @@ def _network_anomaly_score(payload: dict) -> float:
                     pass
             bytes_mb = bytes_sent / 1_000_000
             X = np.array([[hour, 0, bytes_mb]])
-            # decision_function returns < 0 for anomalies
+            
+            # Compute score
             score_if = if_model.decision_function(X)[0]
-            # Convert to 0-1 probability-like scale (heuristic mapping)
             prob = max(0.0, min(1.0, 0.5 - score_if))
-            return float(prob), {"ml_anomaly_score": round(prob, 4)}
+            
+            # Compute SHAP
+            shap_values = if_explainer.shap_values(X)
+            # The features for our dummy model were: hour_of_day, login_failures, bytes_sent_mb
+            feature_names = ["hour_of_day", "login_failures", "bytes_sent_mb"]
+            ml_contributions = {}
+            for i, val in enumerate(shap_values[0]):
+                # Note: For IsolationForest in SHAP, negative values push score towards anomaly
+                if abs(val) > 0.1: 
+                    ml_contributions[f"feature_{feature_names[i]}"] = float(val)
+
+            return float(prob), ml_contributions
         except Exception as e:
             logger.warning(f"ML anomaly scoring failed, falling back to heuristic: {e}")
 

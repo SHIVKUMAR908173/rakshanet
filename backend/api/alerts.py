@@ -1,7 +1,7 @@
 """Alerts API — endpoints for retrieving, filtering, and providing feedback on alerts."""
 
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, WebSocket, WebSocketDisconnect
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from schemas.alert import (
     AlertFeedbackResponse,
     AlertStatusUpdate,
 )
+from services.websocket_manager import manager
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -143,3 +144,13 @@ async def update_alert_status(
 
     alert.status = request.status
     return {"alert_id": alert_id, "status": request.status, "message": "Status updated"}
+
+@router.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # We don't expect messages from client, but we need to keep connection open
+            data = await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)

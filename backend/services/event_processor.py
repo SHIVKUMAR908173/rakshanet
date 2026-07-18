@@ -30,6 +30,8 @@ from services.correlation import (
     get_mitre_technique,
 )
 from services.explainability import generate_explanation
+from services.websocket_manager import manager
+from schemas.alert import AlertResponse
 from config import settings
 
 logger = logging.getLogger("rakshanet.event_processor")
@@ -161,10 +163,19 @@ async def process_event(event_id: int, scoring_type: str):
                     f"Alert created: severity={risk_result['severity']}, "
                     f"threat={threat_type}, score={risk_result['risk_score']}"
                 )
-
+                
             # Mark event as processed
             event.processed = True
             await db.commit()
+            
+            # Broadcast alert if one was created
+            if should_create_alert(risk_result["risk_score"]):
+                try:
+                    await db.refresh(alert)
+                    alert_dict = AlertResponse.model_validate(alert).model_dump(mode='json')
+                    await manager.broadcast_alert(alert_dict)
+                except Exception as ws_e:
+                    logger.warning(f"Failed to broadcast alert over WS: {ws_e}")
 
         except Exception as e:
             logger.error(f"Error processing event {event_id}: {e}", exc_info=True)

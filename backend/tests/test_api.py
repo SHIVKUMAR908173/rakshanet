@@ -8,6 +8,7 @@ from main import app
 from database import Base, engine, get_db
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from routers.auth import get_current_user
 
 # Setup test database
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -24,13 +25,14 @@ def override_get_db():
         db.close()
 
 app.dependency_overrides[get_db] = override_get_db
+app.dependency_overrides[get_current_user] = lambda: {"username": "test@test.local", "role": "admin"}
 client = TestClient(app)
 
 
 def test_health_check():
     response = client.get("/health")
     assert response.status_code == 200
-    assert response.json()["status"] == "ok"
+    assert response.json()["status"] == "healthy"
 
 def test_ingest_email_benign():
     payload = {
@@ -89,7 +91,7 @@ def test_get_dashboard_summary():
 def test_get_alerts():
     response = client.get("/api/v1/alerts")
     assert response.status_code == 200
-    assert isinstance(response.json(), list)
+    assert "alerts" in response.json()
 
 def test_get_playbooks():
     response = client.get("/api/v1/playbooks")
