@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import { fetchAlerts } from '../api/client';
+import { fetchAlerts, updateAlertStatus } from '../api/client';
 
 const DEMO_ALERTS = {
   total: 38,
@@ -113,6 +113,19 @@ export default function AlertQueue() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [filterSeverity, filterStatus]);
+
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      await updateAlertStatus(id, status);
+      setAlerts(prev => ({
+        ...prev,
+        alerts: prev.alerts.map(a => a.id === id ? { ...a, status } : a)
+      }));
+    } catch (err) {
+      console.error("Failed to update status", err);
+      alert("Failed to update status: " + err.message);
+    }
+  };
 
   const sortedAlerts = [...alerts.alerts].sort((a, b) => {
     let av, bv;
@@ -256,10 +269,10 @@ export default function AlertQueue() {
                         ))}
                         <div className="shap-summary">{alert.explanation_text}</div>
                         <div className="btn-group mt-4">
-                          <button className="btn btn-danger">
+                          <button className="btn btn-danger" onClick={() => handleUpdateStatus(alert.id, 'confirmed')}>
                             <AlertTriangle size={14} /> Confirm Threat
                           </button>
-                          <button className="btn btn-secondary">Dismiss (False Positive)</button>
+                          <button className="btn btn-secondary" onClick={() => handleUpdateStatus(alert.id, 'dismissed')}>Dismiss (False Positive)</button>
                           <button className="btn btn-primary" onClick={() => navigate(`/alerts/${alert.id}`)}>
                             View Full Detail →
                           </button>

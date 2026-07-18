@@ -4,6 +4,7 @@ import {
   ArrowLeft, AlertTriangle, Shield, BookOpen,
   CheckCircle, XCircle, Clock, ExternalLink,
 } from 'lucide-react';
+import { fetchAlert, updateAlertStatus, createIncident } from '../api/client';
 
 const DEMO_ALERT = {
   id: 1, user_identity: 'ravi.sharma@gov.in', asset_id: 1,
@@ -52,6 +53,35 @@ export default function AlertDetail() {
   const navigate = useNavigate();
   const [alert, setAlert] = useState(DEMO_ALERT);
   const [playbook] = useState(DEMO_PLAYBOOK);
+
+  useEffect(() => {
+    fetchAlert(id).then(data => setAlert(data)).catch(() => {});
+  }, [id]);
+
+  const handleUpdateStatus = async (status) => {
+    try {
+      await updateAlertStatus(alert.id, status);
+      setAlert(prev => ({ ...prev, status }));
+    } catch (err) {
+      console.error("Failed to update status", err);
+      alert("Failed to update status: " + err.message);
+    }
+  };
+
+  const handleCreateIncident = async () => {
+    try {
+      await createIncident({ 
+        alert_id: alert.id, 
+        playbook_id: playbook.playbook_id, 
+        title: `Incident for Alert #${alert.id}`,
+        status: 'open' 
+      });
+      navigate('/incidents');
+    } catch (err) {
+      console.error("Failed to open incident", err);
+      alert("Failed to open incident: " + err.message);
+    }
+  };
 
   const ctx = alert.explanation_json?.threat_context || {};
   const features = alert.explanation_json?.features || [];
@@ -184,16 +214,16 @@ export default function AlertDetail() {
           <div className="card">
             <div className="card-title mb-4">⚡ Actions</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
-              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
+              <button className="btn btn-primary" onClick={handleCreateIncident} style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
                 <BookOpen size={16} /> Open Incident with This Playbook
               </button>
-              <button className="btn btn-danger" style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
+              <button className="btn btn-danger" onClick={() => handleUpdateStatus('confirmed')} style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
                 <AlertTriangle size={16} /> Confirm Threat
               </button>
-              <button className="btn btn-success" style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
+              <button className="btn btn-success" onClick={() => handleUpdateStatus('dismissed')} style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
                 <CheckCircle size={16} /> Dismiss — False Positive
               </button>
-              <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
+              <button className="btn btn-secondary" onClick={() => handleUpdateStatus('escalated')} style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
                 <Shield size={16} /> Escalate to SOC Lead
               </button>
             </div>

@@ -10,7 +10,7 @@ export default function Incidents() {
             <h1>🚨 Incidents</h1>
             <p>Tracked and escalated security incidents</p>
           </div>
-          <button className="btn btn-primary">
+          <button className="btn btn-primary" onClick={() => alert('New Incident dialog would open here.')}>
             <Plus size={16} /> Open New Incident
           </button>
         </div>
@@ -20,7 +20,7 @@ export default function Incidents() {
         <FileWarning size={48} />
         <h3>No Open Incidents</h3>
         <p>All clear! There are currently no active incidents requiring your attention.</p>
-        <button className="btn btn-secondary mt-6">View Resolved Incidents</button>
+        <button className="btn btn-secondary mt-6" onClick={() => alert('Loading resolved incidents...')}>View Resolved Incidents</button>
       </div>
     </div>
   );

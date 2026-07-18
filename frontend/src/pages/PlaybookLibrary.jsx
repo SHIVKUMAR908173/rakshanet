@@ -89,7 +89,7 @@ export default function PlaybookLibrary() {
             }}
           />
         </div>
-        <button className="btn btn-primary">
+        <button className="btn btn-primary" onClick={() => alert('Create Playbook editor would open here.')}>
           <BookOpen size={16} /> Create Playbook
         </button>
       </div>
@@ -131,7 +131,7 @@ export default function PlaybookLibrary() {
               <div style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
                 Est. resolution time: <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{pb.estimated_time_minutes}m</span>
               </div>
-              <button className="btn btn-secondary">View Full Playbook →</button>
+              <button className="btn btn-secondary" onClick={() => alert(`View details for playbook: ${pb.name}`)}>View Full Playbook →</button>
             </div>
           </div>
         ))}
