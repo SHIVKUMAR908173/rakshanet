@@ -50,11 +50,12 @@ services:
       PHISHING_WEIGHT: ${PHISHING_WEIGHT:-0.4}
       ANOMALY_WEIGHT: ${ANOMALY_WEIGHT:-0.4}
       CORRELATION_BONUS_WEIGHT: ${CORRELATION_BONUS_WEIGHT:-0.2}
-      ALERT_THRESHOLD_LOW: ${ALERT_THRESHOLD_LOW:-0.3}
-      ALERT_THRESHOLD_MEDIUM: ${ALERT_THRESHOLD_MEDIUM:-0.5}
+      ALERT_THRESHOLD_LOW: ${ALERT_THRESHOLD_LOW:-0.2}
+      ALERT_THRESHOLD_MEDIUM: ${ALERT_THRESHOLD_MEDIUM:-0.4}
       ALERT_THRESHOLD_HIGH: ${ALERT_THRESHOLD_HIGH:-0.7}
       ALERT_THRESHOLD_CRITICAL: ${ALERT_THRESHOLD_CRITICAL:-0.9}
     volumes:
+      - ./backend:/app
       - ./ml/models:/app/ml_models:ro
     depends_on:
       db:
@@ -71,7 +72,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      VITE_API_BASE_URL: http://localhost:8000
+      VITE_API_URL: http://backend:8000
     depends_on:
       - backend
 

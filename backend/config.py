@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     correlation_bonus_weight: float = 0.2
 
     # ── Alert Thresholds ──
-    alert_threshold_low: float = 0.3
-    alert_threshold_medium: float = 0.5
+    alert_threshold_low: float = 0.2
+    alert_threshold_medium: float = 0.4
     alert_threshold_high: float = 0.7
     alert_threshold_critical: float = 0.9
 

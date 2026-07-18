@@ -95,7 +95,13 @@ export default function Dashboard() {
   useEffect(() => {
     setLoading(true);
     fetchDashboardSummary()
-      .then((d) => setData({ ...DEMO_DATA, ...d }))
+      .then((d) => {
+        if (d && d.total_alerts > 0) {
+          setData(d);
+        } else {
+          setData(DEMO_DATA);
+        }
+      })
       .catch(() => setData(DEMO_DATA))
       .finally(() => setLoading(false));
   }, []);

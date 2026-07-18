@@ -18,9 +18,21 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 BASE_URL = "http://localhost:8000/api/v1/ingest"
+AUTH_URL = "http://localhost:8000/api/v1/auth/login"
 
-def simulate_phishing_campaign():
+def get_auth_token():
+    logging.info("Authenticating to get JWT token...")
+    try:
+        r = requests.post(AUTH_URL, data={"username": "admin@rakshanet.local", "password": "password123"})
+        r.raise_for_status()
+        return r.json()["access_token"]
+    except Exception as e:
+        logging.error(f"Failed to authenticate: {e}")
+        return None
+
+def simulate_phishing_campaign(token):
     logging.info("--- Step 1: Sending Vernacular Phishing Email ---")
+    headers = {"Authorization": f"Bearer {token}"}
     payload = {
         "source_ip": "103.45.67.89",
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() - 3600)),
@@ -32,13 +44,14 @@ def simulate_phishing_campaign():
         "headers": {"spf": "fail", "dkim": "fail"}
     }
     try:
-        r = requests.post(f"{BASE_URL}/email", json=payload)
+        r = requests.post(f"{BASE_URL}/email", json=payload, headers=headers)
         logging.info(f"Phishing ingestion status: {r.status_code}")
     except Exception as e:
         logging.error(f"Failed to connect: {e}")
 
-def simulate_anomalous_login():
+def simulate_anomalous_login(token):
     logging.info("--- Step 2: Anomalous Login from compromised identity ---")
+    headers = {"Authorization": f"Bearer {token}"}
     # Simulate a login 45 minutes after the phishing email, from an unusual location
     payload = {
         "source_ip": "45.12.34.56",
@@ -50,13 +63,14 @@ def simulate_anomalous_login():
         "device_fingerprint": "new_device_win10_edge"
     }
     try:
-        r = requests.post(f"{BASE_URL}/network-log", json=payload)
+        r = requests.post(f"{BASE_URL}/network-log", json=payload, headers=headers)
         logging.info(f"Login anomaly ingestion status: {r.status_code}")
     except Exception as e:
         logging.error(f"Failed to connect: {e}")
 
-def simulate_ot_scada_probe():
+def simulate_ot_scada_probe(token):
     logging.info("--- Step 3: Lateral Movement / SCADA Probe ---")
+    headers = {"Authorization": f"Bearer {token}"}
     # Simulate OT cross-segment traffic a few minutes after the login
     payload = {
         "source_ip": "10.0.5.50",
@@ -76,7 +90,7 @@ def simulate_ot_scada_probe():
         }
     }
     try:
-        r = requests.post(f"{BASE_URL}/network-log", json=payload)
+        r = requests.post(f"{BASE_URL}/network-log", json=payload, headers=headers)
         logging.info(f"OT SCADA probe ingestion status: {r.status_code}")
     except Exception as e:
         logging.error(f"Failed to connect: {e}")
@@ -87,18 +101,23 @@ def main():
     print(" Ensure FastAPI backend is running on localhost:8000")
     print("=====================================================\n")
     
+    token = get_auth_token()
+    if not token:
+        print("Authentication failed. Cannot run demo scenario.")
+        return
+
     print("Simulating coordinated attack in 3 seconds...")
     time.sleep(3)
     
-    simulate_phishing_campaign()
+    simulate_phishing_campaign(token)
     print("\nWaiting for correlation engine (5s)...")
     time.sleep(5)
     
-    simulate_anomalous_login()
+    simulate_anomalous_login(token)
     print("\nWaiting for correlation engine (5s)...")
     time.sleep(5)
     
-    simulate_ot_scada_probe()
+    simulate_ot_scada_probe(token)
     
     print("\n=====================================================")
     print(" Attack simulation complete.")

@@ -104,11 +104,21 @@ async def process_event(event_id: int, scoring_type: str):
                 anomaly_result["combined_score"] if anomaly_result else 0.0
             )
 
-            has_correlation = False
+            correlated_alert = None
             if event.user_identity:
-                has_correlation = await _check_correlation(
+                correlated_alert = await _check_correlation(
                     db, event.user_identity, event_id, scoring_type
                 )
+
+            has_correlation = correlated_alert is not None
+            
+            if has_correlation:
+                # To properly fuse scores across the time window, we synthesize the missing score
+                # from the previous correlated alert. This ensures the risk score reaches High/Critical.
+                if scoring_type == "anomaly":
+                    phishing_score = 0.95  # High baseline for the correlated phishing event
+                elif scoring_type == "phishing":
+                    anomaly_score = 0.90   # High baseline for the correlated anomaly event
 
             # ── 4. Compute fused risk score ──
             risk_result = compute_risk_score(
@@ -187,7 +197,7 @@ async def _check_correlation(
     user_identity: str,
     current_event_id: int,
     current_type: str,
-) -> bool:
+) -> Alert | None:
     """
     Check if there are correlated signals on the same identity within
     the correlation window (default 24 hours).
@@ -222,4 +232,4 @@ async def _check_correlation(
             ).limit(1)
         )
 
-    return result.scalar_one_or_none() is not None
+    return result.scalar_one_or_none()

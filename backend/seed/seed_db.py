@@ -11,9 +11,7 @@ import asyncio
 import json
 import os
 import sys
-from passlib.context import CryptContext
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 # Add backend to path when run directly
@@ -129,25 +127,29 @@ async def seed_assets(session):
 
 async def seed_users(session):
     """Seed default analyst/admin users."""
+    pw_bytes = b"password123"
+    salt = bcrypt.gensalt()
+    pw_hash = bcrypt.hashpw(pw_bytes, salt).decode('utf-8')
+
     users = [
         User(
             name="Admin",
             email="admin@rakshanet.local",
-            password_hash=pwd_context.hash("password123"),
+            password_hash=pw_hash,
             role="admin",
             department="Security Operations",
         ),
         User(
             name="Analyst One",
             email="analyst1@rakshanet.local",
-            password_hash=pwd_context.hash("password123"),
+            password_hash=pw_hash,
             role="analyst",
             department="IT Security",
         ),
         User(
             name="OT Engineer",
             email="ot-engineer@rakshanet.local",
-            password_hash=pwd_context.hash("password123"),
+            password_hash=pw_hash,
             role="engineer",
             department="OT Operations",
         ),

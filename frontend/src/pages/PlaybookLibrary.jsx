@@ -55,8 +55,15 @@ export default function PlaybookLibrary() {
   useEffect(() => {
     setLoading(true);
     fetchPlaybooks()
-      .then((d) => setPlaybooks(d))
-      .catch(() => {})
+      .then((d) => {
+        const fetched = d?.playbooks || (Array.isArray(d) ? d : []);
+        if (fetched.length > 0) {
+          setPlaybooks(fetched);
+        } else {
+          setPlaybooks(DEMO_PLAYBOOKS);
+        }
+      })
+      .catch(() => setPlaybooks(DEMO_PLAYBOOKS))
       .finally(() => setLoading(false));
   }, []);
 

@@ -17,6 +17,8 @@ import os
 import joblib
 import shap
 import logging
+from typing import Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger("rakshanet.phishing_scorer")
 
