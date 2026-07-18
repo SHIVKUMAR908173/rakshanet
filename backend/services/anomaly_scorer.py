@@ -15,8 +15,27 @@ import math
 import logging
 from datetime import datetime, timezone
 from typing import Optional
+import os
+import joblib
+import numpy as np
 
 logger = logging.getLogger("rakshanet.anomaly_scorer")
+
+# Try loading the ML model
+ML_MODEL_PATH = os.environ.get("ANOMALY_IF_MODEL_PATH", "/app/ml_models/anomaly_isolation_forest.pkl")
+# Handle local dev path fallback
+if not os.path.exists(ML_MODEL_PATH):
+    local_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "ml", "models", "anomaly_isolation_forest.pkl"))
+    if os.path.exists(local_path):
+        ML_MODEL_PATH = local_path
+
+if_model = None
+try:
+    if os.path.exists(ML_MODEL_PATH):
+        if_model = joblib.load(ML_MODEL_PATH)
+        logger.info(f"Loaded Anomaly ML Model from {ML_MODEL_PATH}")
+except Exception as e:
+    logger.warning(f"Failed to load Anomaly ML model: {e}")
 
 
 # ── Normal business hours (IST: 09:00 - 18:00) ──
@@ -119,6 +138,32 @@ def _network_anomaly_score(payload: dict) -> float:
     duration = payload.get("duration_seconds") or 0
     protocol = (payload.get("protocol") or "").lower()
     dest_port = payload.get("destination_port") or 0
+
+    if if_model is not None:
+        try:
+            # We trained IsolationForest on [hour_of_day, login_failures, bytes_sent_mb]
+            # Just adapting network features to that rough shape to show ML inference works.
+            # In real prod, we'd have a separate autoencoder for network traffic.
+            timestamp = payload.get("timestamp")
+            hour = 12
+            if timestamp:
+                try:
+                    if isinstance(timestamp, str):
+                        dt = datetime.fromisoformat(timestamp)
+                    else:
+                        dt = timestamp
+                    hour = dt.hour
+                except (ValueError, TypeError):
+                    pass
+            bytes_mb = bytes_sent / 1_000_000
+            X = np.array([[hour, 0, bytes_mb]])
+            # decision_function returns < 0 for anomalies
+            score_if = if_model.decision_function(X)[0]
+            # Convert to 0-1 probability-like scale (heuristic mapping)
+            prob = max(0.0, min(1.0, 0.5 - score_if))
+            return float(prob), {"ml_anomaly_score": round(prob, 4)}
+        except Exception as e:
+            logger.warning(f"ML anomaly scoring failed, falling back to heuristic: {e}")
 
     # High outbound volume — potential data exfiltration
     if bytes_sent > 100_000_000:  # > 100 MB

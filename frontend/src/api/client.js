@@ -6,8 +6,16 @@ const API_BASE = '/api/v1';
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE}${endpoint}`;
+  
+  const token = localStorage.getItem('rakshanet_token');
+  const headers = { 'Content-Type': 'application/json' };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const config = {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...headers, ...(options.headers || {}) },
     ...options,
   };
 

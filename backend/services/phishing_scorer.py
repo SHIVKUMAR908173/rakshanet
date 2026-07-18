@@ -16,8 +16,26 @@ import math
 import logging
 from typing import Optional
 from urllib.parse import urlparse
+import os
+import joblib
 
 logger = logging.getLogger("rakshanet.phishing_scorer")
+
+# Try loading the ML model
+ML_MODEL_PATH = os.environ.get("PHISHING_TEXT_MODEL_PATH", "/app/ml_models/phishing_text_model.pkl")
+# Handle local dev path fallback
+if not os.path.exists(ML_MODEL_PATH):
+    local_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "ml", "models", "phishing_text_model.pkl"))
+    if os.path.exists(local_path):
+        ML_MODEL_PATH = local_path
+
+ml_model = None
+try:
+    if os.path.exists(ML_MODEL_PATH):
+        ml_model = joblib.load(ML_MODEL_PATH)
+        logger.info(f"Loaded Phishing ML Model from {ML_MODEL_PATH}")
+except Exception as e:
+    logger.warning(f"Failed to load Phishing ML model: {e}")
 
 
 # ── Heuristic keyword lists for fallback scoring ──
@@ -59,6 +77,15 @@ def _score_text_heuristic(subject: str, body: str) -> float:
     combined = f"{subject} {body}".lower()
     if not combined.strip():
         return 0.0
+
+    if ml_model is not None:
+        try:
+            # ml_model is a LogisticRegression pipeline
+            # predict_proba returns [[prob_0, prob_1]]
+            prob_phishing = ml_model.predict_proba([combined])[0][1]
+            return float(prob_phishing)
+        except Exception as e:
+            logger.warning(f"ML text scoring failed, falling back to heuristic: {e}")
 
     word_count = max(len(combined.split()), 1)
 

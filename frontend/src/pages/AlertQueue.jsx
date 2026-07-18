@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Search, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { fetchAlerts, updateAlertStatus } from '../api/client';
+import AnalyticsDashboard from '../components/AnalyticsDashboard';
 
 const DEMO_ALERTS = {
   total: 38,
@@ -157,6 +158,8 @@ export default function AlertQueue() {
         <h1>⚡ Alert Queue</h1>
         <p>Prioritised threat alerts with SHAP explanations — sorted by risk score</p>
       </div>
+
+      {!loading && alerts.alerts.length > 0 && <AnalyticsDashboard alerts={alerts.alerts} />}
 
       {/* Filters */}
       <div className="flex items-center gap-3 mb-6">
